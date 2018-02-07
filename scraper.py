@@ -115,25 +115,32 @@ def setup():
     # User-Agent
     br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
 
+def get_student_index():
+    if os.environ['student_index']:
+        return int(os.environ['student_index'])
+    return 0
 
 def get_base_url():
     """returns the site's base url, taken from the login page url"""
+    if get_config('Authentication')['base_url']:
+        return get_config('Authentication')['base_url']
     return get_config('Authentication')['login_url'].split("/campus")[0] + '/campus/'
 
 def get_schedule_page_url():
     """returns the url of the schedule page"""
+    person = get_student_index()
     school_data = br.open(get_base_url() + 'portal/portalOutlineWrapper.xsl?x=portal.PortalOutline&contentType=text/xml&lang=en')
     dom = minidom.parse(school_data)
 
-    node = dom.getElementsByTagName('Student')[0]
+    node = dom.getElementsByTagName('Student')[person]
     person_id = node.getAttribute('personID')
     first_name = node.getAttribute('firstName')
     last_name = node.getAttribute('lastName')
 
-    node = dom.getElementsByTagName('Calendar')[0]
+    node = dom.getElementsByTagName('Calendar')[person]
     school_id = node.getAttribute('schoolID')
 
-    node = dom.getElementsByTagName('ScheduleStructure')[0]
+    node = dom.getElementsByTagName('ScheduleStructure')[person]
     calendar_id = node.getAttribute('calendarID')
     structure_id = node.getAttribute('structureID')
     calendar_name = node.getAttribute('calendarName')
@@ -158,10 +165,12 @@ def get_class_links():
     link_list = []
     for row in table.findAll('tr')[1:get_num_blocks()+1]:
         for col in row.findAll('td'):
-            link = col.find('a')['href']
-            if 'mailto' in link:
-                link = None
-            link_list.append(link)
+            a = col.find('a')
+            if a:
+                link = a['href']
+                if 'mailto' in link:
+                    link = None
+                link_list.append(link)
 
     return link_list
 
